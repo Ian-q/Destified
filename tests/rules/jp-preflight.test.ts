@@ -22,11 +22,12 @@ describe('resolvePreflightJP', () => {
     expect(out.choices['n-visa'].ruleId).toBe('jp.preflight.visa.us-exempt');
   });
 
-  it('does not resolve n-visa when no visa_exemption row present', () => {
+  it("resolves n-visa to an explicit 'verify' (never silently exempt) when no visa_exemption row present", () => {
     const f = baseFacts();
     f.tables = {};
     const out = resolvePreflightJP(f);
-    expect(out.choices['n-visa']).toBeUndefined();
+    expect(out.choices['n-visa'].choiceId).toBe('yes');
+    expect(out.choices['n-visa'].ruleId).toBe('jp.preflight.visa.unverified');
   });
 
   it('resolves n-drive=yes when driving with valid 1949 IDP', () => {

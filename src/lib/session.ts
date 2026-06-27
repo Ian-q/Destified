@@ -1,7 +1,7 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 
-export const SESSION_COOKIE = 'destify-session';
+export const SESSION_COOKIE = 'destified-session';
 
 export async function getSessionUserId(): Promise<string | null> {
   const jar = await cookies();
