@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Clock3, CheckSquare2, Map, Sparkles, Plane } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
+import { AppPreview } from "@/components/destified/app-preview";
+import { Footer } from "@/components/destified/footer";
 
 // Animation phases:
 //   0 = city marquee
@@ -608,6 +610,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Product preview — Organizer mockup ────────────────────────── */}
+      <AppPreview />
+
       {/* ── How it works — Flight Route ───────────────────────────────── */}
       <section style={{ padding: "80px 24px 104px" }}>
         <div style={{ maxWidth: 660, margin: "0 auto" }}>
@@ -727,6 +732,9 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+
+      {/* ── Footer ────────────────────────────────────────────────────── */}
+      <Footer />
     </>
   );
 }
