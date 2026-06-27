@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { saveProfileAction } from "@/lib/profile-actions";
 import { COUNTRIES } from "@/lib/iso-countries";
 import { toast } from "@/components/destified/toast";
+import { findInvalidDateFields, type DateFieldState } from "@/lib/profile-validation";
 import type { PermanentProfile } from "@/lib/user-profile";
 
 const T2 = [
@@ -28,24 +29,47 @@ export function ProfileForm({ initial }: { initial: PermanentProfile | null }) {
   const [meds, setMeds] = useState<string[]>(initial?.controlledMeds ?? []);
   const [hasMinors, setHasMinors] = useState<boolean>(initial?.hasMinors ?? false);
   const [medDraft, setMedDraft] = useState('');
+  const [invalidDateIds, setInvalidDateIds] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+  const formRef = useRef<HTMLDivElement>(null);
 
-  const save = () => startTransition(async () => {
-    try {
-      await saveProfileAction({
-        citizenships, residence,
-        idpConvention: conv, idpExpiry: expiry,
-        controlledMeds: meds, hasMinors,
-      });
-      toast('Profile saved');
-    } catch {
-      toast("Couldn't save — please retry");
+  const save = () => {
+    // Read each date control's live DOM validity: a partial entry (e.g. "2029")
+    // never reaches React state, so we must inspect `validity.badInput` here
+    // rather than trust the captured value (issue #20).
+    const dateFields: DateFieldState[] = formRef.current
+      ? Array.from(formRef.current.querySelectorAll<HTMLInputElement>('input[type="date"]')).map((el) => ({
+          id: el.id,
+          label: el.dataset.label ?? el.id,
+          value: el.value || null,
+          badInput: el.validity.badInput,
+        }))
+      : [];
+    const invalid = findInvalidDateFields(dateFields);
+    if (invalid.length > 0) {
+      setInvalidDateIds(invalid.map((f) => f.id));
+      toast(`Check ${invalid.map((f) => f.label).join(', ')} — pick a full date or clear the field.`);
+      return;
     }
-  });
+    setInvalidDateIds([]);
+
+    startTransition(async () => {
+      try {
+        await saveProfileAction({
+          citizenships, residence,
+          idpConvention: conv, idpExpiry: expiry,
+          controlledMeds: meds, hasMinors,
+        });
+        toast('Profile saved');
+      } catch {
+        toast("Couldn't save — please retry");
+      }
+    });
+  };
 
   return (
     <div style={{ minHeight: '100svh', background: 'var(--cream-warm)', padding: '40px 24px' }}>
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <div ref={formRef} style={{ maxWidth: 640, margin: '0 auto' }}>
         <Link href="/organizer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--mocha)', textDecoration: 'none', marginBottom: 16, fontSize: 13 }}>
           <ArrowLeft size={13} /> Back to organizer
         </Link>
@@ -67,12 +91,17 @@ export function ProfileForm({ initial }: { initial: PermanentProfile | null }) {
             <div key={c.country} style={{ marginTop: 10 }}>
               <Label>{c.country} passport expiry (optional)</Label>
               <input
+                id={`pass-${c.country}`}
+                data-label={`${c.country} passport expiry`}
                 type="date"
                 value={c.passportExpiry ?? ''}
-                onChange={(e) => setCitizenships(citizenships.map((x) =>
-                  x.country === c.country ? { ...x, passportExpiry: e.target.value || null } : x,
-                ))}
-                style={inputStyle}
+                onChange={(e) => {
+                  setInvalidDateIds((ids) => ids.filter((id) => id !== `pass-${c.country}`));
+                  setCitizenships(citizenships.map((x) =>
+                    x.country === c.country ? { ...x, passportExpiry: e.target.value || null } : x,
+                  ));
+                }}
+                style={dateInputStyle(invalidDateIds.includes(`pass-${c.country}`))}
               />
             </div>
           ))}
@@ -115,7 +144,14 @@ export function ProfileForm({ initial }: { initial: PermanentProfile | null }) {
             ))}
           </div>
           <Label style={{ marginTop: 16 }}>IDP expiry</Label>
-          <input type="date" value={expiry ?? ''} onChange={(e) => setExpiry(e.target.value || null)} style={inputStyle} />
+          <input
+            id="idp-expiry"
+            data-label="IDP expiry"
+            type="date"
+            value={expiry ?? ''}
+            onChange={(e) => { setInvalidDateIds((ids) => ids.filter((id) => id !== 'idp-expiry')); setExpiry(e.target.value || null); }}
+            style={dateInputStyle(invalidDateIds.includes('idp-expiry'))}
+          />
         </Section>
 
         <Section title="Health">
@@ -211,6 +247,8 @@ function SingleCountry({ value, onChange }: { value: string | null; onChange: (v
 
 const sectionStyle: React.CSSProperties = { background: 'white', borderRadius: 18, padding: 28, marginBottom: 18, boxShadow: '0 2px 12px rgba(0,0,0,.04)' };
 const inputStyle: React.CSSProperties = { width: '100%', background: 'rgba(253,251,247,.7)', border: '1.5px solid rgba(148,139,130,.18)', borderRadius: 10, padding: '11px 14px', fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--charcoal)', outline: 'none', boxSizing: 'border-box' };
+const dateInputStyle = (invalid: boolean): React.CSSProperties =>
+  invalid ? { ...inputStyle, borderColor: '#c0392b', background: 'rgba(192,57,43,.05)' } : inputStyle;
 const segStyle = (active: boolean): React.CSSProperties => ({ padding: '10px 18px', borderRadius: 999, fontSize: 13, fontWeight: 500, border: '1.5px solid ' + (active ? 'var(--charcoal)' : 'rgba(148,139,130,.22)'), background: active ? 'var(--charcoal)' : 'transparent', color: active ? 'var(--cream)' : 'var(--charcoal)', cursor: 'pointer' });
 const chipStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: 'var(--sand)', fontSize: 12.5, color: 'var(--charcoal)' };
 const primaryBtn: React.CSSProperties = { padding: '12px 26px', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--sage) 0%, var(--ocean) 100%)', color: 'var(--cream)', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
