@@ -41,7 +41,7 @@ function portalColor(portal: string): string {
 
 // ─── formatters ──────────────────────────────────────────────────────────────
 function fmtUsd(n: number): string {
-  return "$" + Math.round(Math.abs(n)).toLocaleString();
+  return "$" + Math.round(n).toLocaleString();
 }
 
 function fmtPts(n: number): string {
@@ -62,7 +62,9 @@ function buildBreakdown(
       ? currMap.get(option.pointsCurrencyId)
       : undefined;
     const code = curr?.code ?? "pts";
-    parts.push(`${fmtPts(option.pointsAmount)} ${code}`);
+    const rateStr =
+      bd.cppUsed != null ? ` @ ${+bd.cppUsed.toFixed(2)}¢` : "";
+    parts.push(`${fmtPts(option.pointsAmount)} ${code}${rateStr}`);
   }
 
   if (bd.cashUsd > 0) {
@@ -72,7 +74,7 @@ function buildBreakdown(
 
   if (bd.adjustmentsUsd !== 0) {
     const sign = bd.adjustmentsUsd > 0 ? "+" : "−";
-    parts.push(`${sign}${fmtUsd(bd.adjustmentsUsd)} adj`);
+    parts.push(`${sign}${fmtUsd(Math.abs(bd.adjustmentsUsd))} adj`);
   }
 
   return parts.join(" · ") || "cash only";
@@ -134,7 +136,6 @@ function HandCard({
   const { option, effectiveUsd, breakdown, qualityRank } = ro;
   const hasPoints = breakdown.pointsUsd > 0;
   const route = routeText(option);
-
 
   return (
     <div
@@ -247,7 +248,7 @@ function HandCard({
           letterSpacing: "-.02em",
         }}
       >
-        {fmtUsd(Math.round(effectiveUsd))}
+        {fmtUsd(effectiveUsd)}
       </div>
       <div style={{ fontSize: 10, color: T.mocha2, marginTop: -1 }}>
         effective cost{isBest ? " · cheapest" : ""}
@@ -381,7 +382,7 @@ function ListRow({
           flexShrink: 0,
         }}
       >
-        {fmtUsd(Math.round(effectiveUsd))}
+        {fmtUsd(effectiveUsd)}
       </span>
     </div>
   );
