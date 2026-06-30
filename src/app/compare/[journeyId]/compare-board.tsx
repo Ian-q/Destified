@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { Journey, PointCurrency } from "@/lib/deals/types";
+import { useRouter } from "next/navigation";
+import type { Journey, Option, PointCurrency } from "@/lib/deals/types";
 import type { RankedOption, IncompleteOption } from "@/lib/deals/score";
+import { deleteOptionAction } from "@/lib/deals/journey-actions";
+import { toast } from "@/components/destified/toast";
+import { OptionForm } from "./option-form";
 
 // ─── tokens (matching board.html / cards-portals.html) ───────────────────────
 const T = {
@@ -128,10 +132,14 @@ function HandCard({
   ro,
   isBest,
   currMap,
+  onEdit,
+  onDelete,
 }: {
   ro: RankedOption;
   isBest: boolean;
   currMap: Map<string, PointCurrency>;
+  onEdit: (option: Option) => void;
+  onDelete: (optionId: string) => void;
 }) {
   const { option, effectiveUsd, breakdown, qualityRank } = ro;
   const hasPoints = breakdown.pointsUsd > 0;
@@ -285,6 +293,50 @@ function HandCard({
           ◆ award
         </div>
       )}
+
+      {/* edit / delete */}
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginTop: 10,
+          paddingTop: 8,
+          borderTop: `1px solid ${T.line}`,
+        }}
+      >
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(option); }}
+          style={{
+            flex: 1,
+            background: "transparent",
+            border: `1px solid ${T.line}`,
+            borderRadius: 6,
+            color: T.mocha2,
+            fontSize: 10.5,
+            fontWeight: 600,
+            padding: "4px 0",
+            cursor: "pointer",
+          }}
+        >
+          Edit
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(option.id); }}
+          style={{
+            flex: 1,
+            background: "transparent",
+            border: "1px solid rgba(200,80,80,.25)",
+            borderRadius: 6,
+            color: "#c06060",
+            fontSize: 10.5,
+            fontWeight: 600,
+            padding: "4px 0",
+            cursor: "pointer",
+          }}
+        >
+          Delete
+        </button>
+      </div>
     </div>
   );
 }
@@ -293,10 +345,14 @@ function ListRow({
   ro,
   isBest,
   currMap,
+  onEdit,
+  onDelete,
 }: {
   ro: RankedOption;
   isBest: boolean;
   currMap: Map<string, PointCurrency>;
+  onEdit: (option: Option) => void;
+  onDelete: (optionId: string) => void;
 }) {
   const { option, effectiveUsd, qualityRank } = ro;
   const route = routeText(option);
@@ -384,6 +440,40 @@ function ListRow({
       >
         {fmtUsd(effectiveUsd)}
       </span>
+
+      {/* edit / delete */}
+      <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(option); }}
+          style={{
+            background: "transparent",
+            border: `1px solid ${T.line}`,
+            borderRadius: 6,
+            color: T.mocha2,
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "3px 8px",
+            cursor: "pointer",
+          }}
+        >
+          Edit
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(option.id); }}
+          style={{
+            background: "transparent",
+            border: "1px solid rgba(200,80,80,.25)",
+            borderRadius: 6,
+            color: "#c06060",
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "3px 8px",
+            cursor: "pointer",
+          }}
+        >
+          Del
+        </button>
+      </div>
     </div>
   );
 }
@@ -463,7 +553,15 @@ function BankRail({ currencies }: { currencies: PointCurrency[] }) {
   );
 }
 
-function IncompleteBucket({ incomplete }: { incomplete: IncompleteOption[] }) {
+function IncompleteBucket({
+  incomplete,
+  onEdit,
+  onDelete,
+}: {
+  incomplete: IncompleteOption[];
+  onEdit: (option: Option) => void;
+  onDelete: (optionId: string) => void;
+}) {
   if (incomplete.length === 0) return null;
 
   return (
@@ -523,6 +621,36 @@ function IncompleteBucket({ incomplete }: { incomplete: IncompleteOption[] }) {
           >
             Set CPP →
           </Link>
+          <button
+            onClick={() => onEdit(item.option)}
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,.18)",
+              borderRadius: 5,
+              color: "#9fb6ad",
+              fontSize: 10.5,
+              padding: "2px 7px",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => onDelete(item.option.id)}
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(200,80,80,.25)",
+              borderRadius: 5,
+              color: "#c06060",
+              fontSize: 10.5,
+              padding: "2px 7px",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            Del
+          </button>
         </div>
       ))}
     </div>
@@ -605,9 +733,34 @@ export function CompareBoard({
   incomplete: IncompleteOption[];
   currencies: PointCurrency[];
 }) {
+  const router = useRouter();
   const [view, setView] = useState<"hand" | "list">("hand");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingOption, setEditingOption] = useState<Option | null>(null);
 
   const currMap = new Map(currencies.map((c) => [c.id, c]));
+
+  function openAdd() {
+    setEditingOption(null);
+    setFormOpen(true);
+  }
+  function openEdit(option: Option) {
+    setEditingOption(option);
+    setFormOpen(true);
+  }
+  function closeForm() {
+    setFormOpen(false);
+    setEditingOption(null);
+  }
+  async function handleDelete(optionId: string) {
+    if (!window.confirm("Delete this option?")) return;
+    try {
+      await deleteOptionAction(optionId);
+      router.refresh();
+    } catch {
+      toast("Failed to delete option.");
+    }
+  }
 
   return (
     <div
@@ -678,6 +831,27 @@ export function CompareBoard({
           )}
         </h1>
 
+        {/* + Add option */}
+        <button
+          onClick={openAdd}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: T.sage,
+            border: "none",
+            borderRadius: 10,
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: 13,
+            padding: "9px 18px",
+            cursor: "pointer",
+            marginBottom: 22,
+          }}
+        >
+          + Add option
+        </button>
+
         {/* main grid: cards + bank rail */}
         <div
           style={{
@@ -720,6 +894,8 @@ export function CompareBoard({
                         ro={ro}
                         isBest={i === 0}
                         currMap={currMap}
+                        onEdit={openEdit}
+                        onDelete={handleDelete}
                       />
                     ))}
                   </div>
@@ -741,6 +917,8 @@ export function CompareBoard({
                         ro={ro}
                         isBest={i === 0}
                         currMap={currMap}
+                        onEdit={openEdit}
+                        onDelete={handleDelete}
                       />
                     ))}
                   </div>
@@ -748,7 +926,11 @@ export function CompareBoard({
               </>
             )}
 
-            <IncompleteBucket incomplete={incomplete} />
+            <IncompleteBucket
+              incomplete={incomplete}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+            />
           </div>
 
           {/* right column: bank rail */}
@@ -757,6 +939,16 @@ export function CompareBoard({
       </div>
 
       <ViewToggle view={view} onSet={setView} />
+
+      {/* Option form modal */}
+      {formOpen && (
+        <OptionForm
+          journeyId={journey.id}
+          currencies={currencies}
+          initial={editingOption ?? undefined}
+          onClose={closeForm}
+        />
+      )}
     </div>
   );
 }
