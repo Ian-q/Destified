@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { effectiveCost } from '@/lib/deals/score';
+import { effectiveCost, rankJourney, qualityRankFor } from '@/lib/deals/score';
 import type { Option, PointCurrency } from '@/lib/deals/types';
 
 const AEROPLAN: PointCurrency = { id: 'c1', userId: 'u1', code: 'AEROPLAN', name: 'Aeroplan', defaultCpp: 1.5 };
@@ -39,5 +39,42 @@ describe('effectiveCost', () => {
     const r = effectiveCost(opt({ pointsCurrencyId: 'missing', pointsAmount: 40000 }), currencies);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/cents-per-point/i);
+  });
+});
+
+describe('rankJourney', () => {
+  it('sorts valuable options ascending, computes delta, and buckets the unvaluable', () => {
+    const opts = [
+      opt({ id: 'alaska', cashUsd: 1000, createdAt: '2026-06-30T00:00:01.000Z' }),
+      opt({ id: 'trip', cashUsd: 850, createdAt: '2026-06-30T00:00:02.000Z' }),
+      opt({ id: 'award', pointsCurrencyId: 'c1', pointsAmount: 57000, cashUsd: 80, createdAt: '2026-06-30T00:00:03.000Z' }), // 935
+      opt({ id: 'broken', pointsCurrencyId: 'missing', pointsAmount: 40000, createdAt: '2026-06-30T00:00:04.000Z' }),
+    ];
+    const { ranked, incomplete } = rankJourney(opts, currencies);
+    expect(ranked.map((r) => r.option.id)).toEqual(['trip', 'award', 'alaska']); // 850, 935, 1000
+    expect(ranked[0].deltaVsBestUsd).toBe(0);
+    expect(ranked[2].deltaVsBestUsd).toBe(150);
+    expect(ranked[0].qualityRank).toBe('A');     // cheapest
+    expect(ranked[2].qualityRank).toBe('2');     // most expensive
+    expect(incomplete.map((i) => i.option.id)).toEqual(['broken']);
+  });
+
+  it('ranks a single option as A', () => {
+    const { ranked } = rankJourney([opt({ cashUsd: 500 })], currencies);
+    expect(ranked[0].qualityRank).toBe('A');
+  });
+
+  it('breaks ties by createdAt (stable)', () => {
+    const a = opt({ id: 'a', cashUsd: 500, createdAt: '2026-06-30T00:00:02.000Z' });
+    const b = opt({ id: 'b', cashUsd: 500, createdAt: '2026-06-30T00:00:01.000Z' });
+    const { ranked } = rankJourney([a, b], currencies);
+    expect(ranked.map((r) => r.option.id)).toEqual(['b', 'a']);
+  });
+});
+
+describe('qualityRankFor', () => {
+  it('maps cheapest to A and most-expensive to 2', () => {
+    expect(qualityRankFor(800, 800, 1000)).toBe('A');
+    expect(qualityRankFor(1000, 800, 1000)).toBe('2');
   });
 });
