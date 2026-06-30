@@ -38,12 +38,13 @@ export async function listCurrencies(db: AnyDb, userId: string): Promise<PointCu
   return rows.map((r: any) => ({ id: r.id, userId: r.userId, code: r.code, name: r.name, defaultCpp: r.defaultCpp }));
 }
 
-export async function upsertCurrency(db: AnyDb, userId: string, input: z.input<typeof CurrencyInput>): Promise<void> {
+export async function upsertCurrency(db: AnyDb, userId: string, input: z.input<typeof CurrencyInput>): Promise<PointCurrency> {
   const parsed = CurrencyInput.parse(input);
-  await db.insert(pointCurrency).values({ userId, ...parsed }).onConflictDoUpdate({
+  const [row] = await db.insert(pointCurrency).values({ userId, ...parsed }).onConflictDoUpdate({
     target: [pointCurrency.userId, pointCurrency.code],
     set: { name: parsed.name, defaultCpp: parsed.defaultCpp },
-  });
+  }).returning();
+  return { id: row.id, userId: row.userId, code: row.code, name: row.name, defaultCpp: row.defaultCpp };
 }
 
 export async function deleteCurrency(db: AnyDb, userId: string, currencyId: string): Promise<void> {

@@ -20,12 +20,11 @@ export function CurrencyEditor({ initial }: { initial: PointCurrency[] }) {
     }
     start(async () => {
       try {
-        await upsertCurrencyAction({ code: code.trim().toUpperCase(), name: name.trim(), defaultCpp: cppNum });
+        const saved = await upsertCurrencyAction({ code: code.trim().toUpperCase(), name: name.trim(), defaultCpp: cppNum });
         toast("Currency saved");
         setRows((r) => {
-          const c = code.trim().toUpperCase();
-          const next = r.filter((x) => x.code !== c);
-          next.push({ id: `tmp-${c}`, userId: "", code: c, name: name.trim(), defaultCpp: cppNum });
+          const next = r.filter((x) => x.code !== saved.code);
+          next.push(saved);
           return next.sort((a, b) => a.code.localeCompare(b.code));
         });
         setCode(""); setName(""); setCpp("");
@@ -37,7 +36,7 @@ export function CurrencyEditor({ initial }: { initial: PointCurrency[] }) {
 
   const remove = (cur: PointCurrency) => start(async () => {
     try {
-      if (!cur.id.startsWith("tmp-")) await deleteCurrencyAction(cur.id);
+      await deleteCurrencyAction(cur.id);
       setRows((r) => r.filter((x) => x.id !== cur.id));
     } catch {
       toast("Couldn't delete — please retry");

@@ -11,7 +11,7 @@ import { pointCurrency, journey, option } from '@/lib/db/schema';
 import {
   listCurrencies, upsertCurrency, deleteCurrency,
   createJourney, listJourneys, getJourneyWithOptions,
-  addOption, assertJourneyOwned,
+  addOption, assertJourneyOwned, updateOption, deleteOption,
 } from '@/lib/deals/journey-db';
 
 async function makeDb() {
@@ -81,6 +81,25 @@ describe('journey-db', () => {
     const a = await makeUser(db); const b = await makeUser(db);
     const { id: jId } = await createJourney(db, a, { fromLabel: 'SEA', toLabel: 'Tokyo' });
     await expect(assertJourneyOwned(db, b, jId)).rejects.toThrow('Forbidden');
+  });
+
+  it('listJourneys returns all journeys for a user', async () => {
+    const db = await makeDb();
+    const userId = await makeUser(db);
+    await createJourney(db, userId, { fromLabel: 'SEA', toLabel: 'Tokyo' });
+    await createJourney(db, userId, { fromLabel: 'NYC', toLabel: 'London' });
+    const list = await listJourneys(db, userId);
+    expect(list).toHaveLength(2);
+  });
+
+  it('refuses cross-user option mutation (updateOption + deleteOption)', async () => {
+    const db = await makeDb();
+    const a = await makeUser(db);
+    const b = await makeUser(db);
+    const { id: jId } = await createJourney(db, a, { fromLabel: 'SEA', toLabel: 'Tokyo' });
+    const { id: optId } = await addOption(db, a, jId, { label: 'Award', portal: 'p', cashUsd: 850 });
+    await expect(updateOption(db, b, optId, { label: 'x', portal: 'y', cashUsd: 1 })).rejects.toThrow('Forbidden');
+    await expect(deleteOption(db, b, optId)).rejects.toThrow('Forbidden');
   });
 
   it('deleting a currency leaves referencing options orphaned (SET NULL), not deleted', async () => {

@@ -40,6 +40,11 @@ describe('effectiveCost', () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/cents-per-point/i);
   });
+
+  it('REFUSES a non-positive cppOverride (cppOverride: 0 must not resolve to $0 value)', () => {
+    const r = effectiveCost(opt({ pointsCurrencyId: 'c1', pointsAmount: 10000, cppOverride: 0 }), currencies);
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe('rankJourney', () => {

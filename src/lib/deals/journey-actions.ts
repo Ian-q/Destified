@@ -15,8 +15,8 @@ import {
 export async function listCurrenciesAction(): Promise<PointCurrency[]> {
   return listCurrencies(db, await requireSession());
 }
-export async function upsertCurrencyAction(input: z.input<typeof CurrencyInput>): Promise<void> {
-  await upsertCurrency(db, await requireSession(), input);
+export async function upsertCurrencyAction(input: z.input<typeof CurrencyInput>): Promise<PointCurrency> {
+  return upsertCurrency(db, await requireSession(), input);
 }
 export async function deleteCurrencyAction(currencyId: string): Promise<void> {
   await deleteCurrency(db, await requireSession(), currencyId);
