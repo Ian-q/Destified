@@ -267,3 +267,9 @@
   background: var(--cream) !important;
   color: var(--charcoal) !important;
 }
+
+/* ─── Deal board: award-shimmer animation ─────────────────────────────────── */
+@keyframes board-shine {
+  0%   { background-position: 0 0 }
+  100% { background-position: 300% 300% }
+}

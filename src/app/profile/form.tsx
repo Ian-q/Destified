@@ -7,16 +7,17 @@ import { saveProfileAction } from "@/lib/profile-actions";
 import { COUNTRIES } from "@/lib/iso-countries";
 import { toast } from "@/components/destified/toast";
 import type { PermanentProfile } from "@/lib/user-profile";
+import type { PointCurrency } from "@/lib/deals/types";
+import { CurrencyEditor } from "./currency-editor";
 
 const T2 = [
   { title: 'Cards', body: 'Track credit cards and benefits used for trip planning.' },
-  { title: 'Points programs', body: 'Loyalty programs you earn / redeem with.' },
   { title: 'Dietary', body: 'Dietary preferences and restrictions.' },
   { title: 'Allergies', body: 'Allergies that matter for travel.' },
   { title: 'Mobility', body: 'Mobility needs that affect itineraries.' },
 ];
 
-export function ProfileForm({ initial }: { initial: PermanentProfile | null }) {
+export function ProfileForm({ initial, currencies }: { initial: PermanentProfile | null; currencies: PointCurrency[] }) {
   const [citizenships, setCitizenships] = useState<{ country: string; passportExpiry: string | null }[]>(
     initial?.citizenships ?? [],
   );
@@ -148,6 +149,9 @@ export function ProfileForm({ initial }: { initial: PermanentProfile | null }) {
         </button>
 
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 22, marginTop: 40, marginBottom: 16 }}>Advanced</h2>
+        <Section title="Points programs">
+          <CurrencyEditor initial={currencies} />
+        </Section>
         {T2.map((s) => (
           <div key={s.title} style={{ ...sectionStyle, opacity: 0.6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
