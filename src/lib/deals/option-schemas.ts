@@ -19,8 +19,6 @@ export const JourneyInput = z.object({
   notes: z.string().nullable().default(null),
 }).strict();
 
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export const OptionInput = z.object({
   label: z.string().min(1),
   portal: z.string().min(1),
@@ -30,7 +28,7 @@ export const OptionInput = z.object({
   cabin: z.enum(['economy', 'premium', 'business', 'first']).nullable().default(null),
   viaText: z.string().nullable().default(null),
   cashUsd: z.number().min(0).default(0),
-  pointsCurrencyId: z.string().regex(uuidRegex).nullable().default(null),
+  pointsCurrencyId: z.string().uuid().nullable().default(null),
   pointsAmount: z.number().int().min(0).nullable().default(null),
   cppOverride: z.number().positive().nullable().default(null),
   adjustments: z.array(AdjustmentInput).default([]),

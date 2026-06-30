@@ -7,7 +7,7 @@ describe('OptionInput', () => {
     expect(r.success).toBe(true);
   });
   it('accepts a points option with fees', () => {
-    const r = OptionInput.safeParse({ label: 'Award', portal: 'aircanada.com', cashUsd: 80, pointsCurrencyId: '11111111-1111-1111-1111-111111111111', pointsAmount: 57000 });
+    const r = OptionInput.safeParse({ label: 'Award', portal: 'aircanada.com', cashUsd: 80, pointsCurrencyId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', pointsAmount: 57000 });
     expect(r.success).toBe(true);
   });
   it('rejects an option with neither cash nor points', () => {
