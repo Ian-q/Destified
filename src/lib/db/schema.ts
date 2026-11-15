@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, date, timestamp, jsonb, pgEnum, integer, uniqueIndex, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, date, timestamp, jsonb, pgEnum, integer, doublePrecision, uniqueIndex, primaryKey } from 'drizzle-orm/pg-core';
 
 export const idpConvention = pgEnum('idp_convention', ['1949', '1968']);
 
@@ -71,3 +71,44 @@ export const conditionRow = pgTable('condition_row', {
 }, (t) => ({
   pk: primaryKey({ columns: [t.rowType, t.rowKey] }),
 }));
+
+export const pointCurrency = pgTable('point_currency', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  defaultCpp: doublePrecision('default_cpp').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userCodeUnique: uniqueIndex('point_currency_user_code_unique').on(t.userId, t.code),
+}));
+
+export const journey = pgTable('journey', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  fromLabel: text('from_label').notNull(),
+  toLabel: text('to_label').notNull(),
+  departDate: date('depart_date'),
+  returnDate: date('return_date'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const option = pgTable('option', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  journeyId: uuid('journey_id').notNull().references(() => journey.id, { onDelete: 'cascade' }),
+  label: text('label').notNull(),
+  portal: text('portal').notNull(),
+  carrier: text('carrier'),
+  stops: integer('stops'),
+  durationMins: integer('duration_mins'),
+  cabin: text('cabin'),
+  viaText: text('via_text'),
+  cashUsd: doublePrecision('cash_usd').notNull().default(0),
+  pointsCurrencyId: uuid('points_currency_id').references(() => pointCurrency.id, { onDelete: 'set null' }),
+  pointsAmount: integer('points_amount'),
+  cppOverride: doublePrecision('cpp_override'),
+  adjustments: jsonb('adjustments').$type<{ label: string; deltaUsd: number }[]>().notNull().default([]),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
