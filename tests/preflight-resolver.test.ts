@@ -73,3 +73,37 @@ describe('resolvePreflightJP n-pass info card', () => {
     expect(out.info['n-pass'].title).toMatch(/^MY Passport · valid /);
   });
 });
+
+describe('resolvePreflightJP n-visa decision — no fail-open (issue #22)', () => {
+  const usExempt = { visa_exemption: { 'US:JP': { exemptDays: 90 } } } as Facts['tables'];
+
+  it("resolves n-visa to 'no' (exempt) when an exemption rule proves it", () => {
+    const out = resolvePreflightJP(makeFacts({ stayDays: 9, tables: usExempt }));
+    expect(out.choices['n-visa']).toBeDefined();
+    expect(out.choices['n-visa'].choiceId).toBe('no');
+  });
+
+  it("never resolves to 'no' for a non-exempt citizenship with no matching rule", () => {
+    // Philippines passport; only US:JP exemption exists in the tables.
+    const out = resolvePreflightJP(makeFacts({
+      citizenships: [{ country: 'PH', passportExpiry: '2030-01-01' }],
+      stayDays: 9,
+      tables: usExempt,
+    }));
+    expect(out.choices['n-visa']).toBeDefined();          // must emit an explicit verdict
+    expect(out.choices['n-visa'].choiceId).not.toBe('no'); // not silently visa-exempt
+    expect(out.choices['n-visa'].choiceId).toBe('yes');
+  });
+
+  it("never resolves to 'no' when the stay exceeds the exempt window", () => {
+    const out = resolvePreflightJP(makeFacts({ stayDays: 120, tables: usExempt }));
+    expect(out.choices['n-visa']).toBeDefined();
+    expect(out.choices['n-visa'].choiceId).toBe('yes');
+  });
+
+  it("never resolves to 'no' when exemption data is unavailable (lookup failed / empty tables)", () => {
+    const out = resolvePreflightJP(makeFacts({ stayDays: 9, tables: {} }));
+    expect(out.choices['n-visa']).toBeDefined();
+    expect(out.choices['n-visa'].choiceId).toBe('yes');
+  });
+});

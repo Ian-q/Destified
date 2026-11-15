@@ -33,7 +33,7 @@ describe('signInDemo', () => {
     const { userId, tripId } = await signInDemo(db);
 
     expect(userId).toMatch(/^[0-9a-f-]{36}$/i);
-    expect(cookieStore.get('destify-session')).toBe(userId);
+    expect(cookieStore.get('destified-session')).toBe(userId);
 
     const u = await db.select().from(users).where(eq(users.id, userId));
     expect(u).toHaveLength(1);

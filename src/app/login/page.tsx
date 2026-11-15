@@ -291,7 +291,7 @@ export default function LoginPage() {
                 lineHeight: 1.55,
                 margin: 0,
               }}>
-                "Planning our honeymoon used to feel overwhelming — Destified made it feel like the adventure itself."
+                &ldquo;Planning our honeymoon used to feel overwhelming — Destified made it feel like the adventure itself.&rdquo;
               </p>
               <p style={{
                 fontFamily: "var(--font-sans)",

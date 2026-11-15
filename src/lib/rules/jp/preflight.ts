@@ -19,7 +19,12 @@ function formatMonthYear(iso: string): string {
 export const resolvePreflightJP: FlowResolver = (f): ResolverOutput => {
   const out: ResolverOutput = { choices: {}, info: {} };
 
-  // n-visa — table-driven across citizenships
+  // n-visa — table-driven across citizenships.
+  // Only emit the visa-exempt branch when a rule actually proves exemption.
+  // When nothing proves it, emit an explicit "verify" verdict rather than
+  // staying silent — silence would let the graph's optimistic `on:true`
+  // default ("No · exempt") win, falsely telling non-exempt travellers they
+  // need no visa (issue #22).
   for (const c of f.citizenships) {
     const visa = f.tables.visa_exemption?.[`${c.country}:${f.toCountry}`];
     if (visa && visa.exemptDays !== null && f.stayDays <= visa.exemptDays) {
@@ -30,6 +35,16 @@ export const resolvePreflightJP: FlowResolver = (f): ResolverOutput => {
       };
       break;
     }
+  }
+  if (!out.choices['n-visa']) {
+    const primaryCountry = f.citizenships[0]?.country;
+    out.choices['n-visa'] = {
+      choiceId: 'yes',
+      ruleId:   'jp.preflight.visa.unverified',
+      reason:   primaryCountry
+        ? `Couldn't confirm visa-exemption for a ${primaryCountry} passport → ${f.toCountry} (${f.stayDays}-night stay). Verify entry requirements with the embassy before booking.`
+        : `Couldn't confirm visa requirements for ${f.toCountry}. Verify entry requirements with the embassy before booking.`,
+    };
   }
 
   // n-meds

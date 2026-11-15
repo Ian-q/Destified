@@ -48,7 +48,7 @@ describe('profile-driven resolution', () => {
     expect(output.choices['n-visa']?.choiceId).toBe('no');
   });
 
-  it('KE citizenship does not auto-resolve n-visa (no seed row, AI mock returns null)', async () => {
+  it("KE citizenship resolves n-visa to 'verify', not exempt (no seed row, AI mock returns null)", async () => {
     const db = await makeDb();
     const { userId } = await signInDemo(db);
     await saveProfile(db, userId, {
@@ -59,10 +59,11 @@ describe('profile-driven resolution', () => {
     });
 
     const { output } = await resolveFlow(db, 'preflight-jp');
-    expect(output.choices['n-visa']).toBeUndefined();
+    expect(output.choices['n-visa']?.choiceId).toBe('yes');
+    expect(output.choices['n-visa']?.ruleId).toBe('jp.preflight.visa.unverified');
   });
 
-  it('flipping citizenship from US to KE removes auto-resolution', async () => {
+  it("flipping citizenship from US to KE flips n-visa from exempt to 'verify'", async () => {
     const db = await makeDb();
     const { userId } = await signInDemo(db);
 
@@ -80,7 +81,9 @@ describe('profile-driven resolution', () => {
       idpConvention: null, idpExpiry: null,
       controlledMeds: [], hasMinors: false,
     });
-    expect((await resolveFlow(db, 'preflight-jp')).output.choices['n-visa']).toBeUndefined();
+    const flipped = (await resolveFlow(db, 'preflight-jp')).output.choices['n-visa'];
+    expect(flipped?.choiceId).toBe('yes');
+    expect(flipped?.ruleId).toBe('jp.preflight.visa.unverified');
   });
 
   it('emits n-pass info with the primary citizenship and pass state', async () => {
