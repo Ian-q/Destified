@@ -38,7 +38,7 @@ export async function signInDemo(db: AnyDb): Promise<{ userId: string; tripId: s
     }
   }
 
-  const email = `demo-${shortId()}@destify.local`;
+  const email = `demo-${shortId()}@destified.local`;
   const [u] = await db.insert(users).values({ email }).returning({ id: users.id });
   const userId = u.id;
 
