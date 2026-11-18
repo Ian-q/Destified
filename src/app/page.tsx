@@ -482,19 +482,38 @@ export default function LandingPage() {
             transition: "opacity 0.9s ease, transform 0.9s ease",
           }}
         >
+          {/* The page's only H1. It's server-rendered (unlike the animated wordmark above),
+              so crawlers always see what Destified does. */}
+          <h1
+            style={{
+              fontFamily: "var(--font-serif), Georgia, serif",
+              fontSize: "clamp(20px, 2vw, 26px)",
+              fontWeight: 500,
+              color: "var(--charcoal)",
+              textAlign: "center",
+              maxWidth: 560,
+              lineHeight: 1.35,
+              letterSpacing: "-0.015em",
+              padding: "0 1.5rem",
+              margin: 0,
+            }}
+          >
+            Get more from the points, cards and memberships you already have.
+          </h1>
           <p
             style={{
               fontFamily: "var(--font-sans)",
               fontSize: "clamp(15px, 1.3vw, 18px)",
               color: "var(--mocha)",
               textAlign: "center",
-              maxWidth: 440,
+              maxWidth: 480,
               lineHeight: 1.7,
               padding: "0 1.5rem",
+              marginTop: "-0.75rem",
             }}
           >
-            Your itinerary, your route, your checklists —<br />
-            all in one quietly beautiful place.
+            Compare cash and award options for each trip, then keep your itinerary,
+            route and pre-flight checklists in one quietly beautiful place.
           </p>
 
           <Link
